@@ -1,0 +1,43 @@
+name: Deploy to Cloud VM
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    name: CI/CD Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies for test
+        run: |
+          cd app
+          npm install
+
+      - name: Basic application check
+        run: |
+          cd app
+          node index.js &
+          sleep 3
+          curl -f http://localhost:3000
+          pkill node
+
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            cd ~/node.js-web-app
+            git pull origin master
+            cd app
+            npm install
+            pm2 restart node.js-web-app
+            pm2 save
+
